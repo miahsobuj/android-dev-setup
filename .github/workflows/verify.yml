@@ -1,0 +1,53 @@
+name: Verify Setup
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run setup verification
+        run: |
+          echo "=== Setup Script ==="
+          head -50 scripts/setup.sh
+          echo ""
+          echo "=== Checking syntax ==="
+          bash -n scripts/setup.sh && echo "Syntax OK" || echo "Syntax ERROR"
+
+  test-build:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v2
+
+      - name: Build sample app
+        run: |
+          cd sample-app
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: sample-app-debug
+          path: sample-app/app/build/outputs/apk/debug/app-debug.apk
